@@ -5,14 +5,17 @@ import { Upload, PlayCircle, AlertCircle } from 'lucide-react';
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { splitAudio } from '@/lib/api';
 
-const HomePage = () => {
+interface HomePageProps {
+  onProcessComplete: (vocals: string, accompaniment: string, originalFileName: string) => void;
+}
+
+const HomePage = ({ onProcessComplete }: HomePageProps) => {
   const [file, setFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [vocals, setVocals] = useState<string | null>(null);
-  const [accompaniment, setAccompaniment] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDragEnter = (e: DragEvent<HTMLDivElement>) => {
@@ -57,26 +60,10 @@ const HomePage = () => {
 
     setIsProcessing(true);
     setError(null);
-    setVocals(null);
-    setAccompaniment(null);
 
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const response = await fetch('http://127.0.0.1:5000/split', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        setError(errorData.error || 'An error occurred while processing the file.');
-      } else {
-        const data = await response.json();
-        setVocals(data.vocals);
-        setAccompaniment(data.accompaniment);
-      }
+      const { vocals, accompaniment } = await splitAudio(file);
+      onProcessComplete(vocals, accompaniment, file.name);
     } catch (error) {
       setError('An error occurred while processing the file.');
     }
@@ -145,7 +132,7 @@ const HomePage = () => {
               )}
             </CardFooter>
           </Card>
-          {(file || error || vocals || accompaniment) && (
+          {(file || error) && (
             <div className="absolute w-full left-0 top-full mt-4">
               {file && (
                 <Alert className="bg-green-100 border-green-400 text-green-700 rounded-lg">
@@ -164,28 +151,6 @@ const HomePage = () => {
                   <div>
                     <AlertTitle className="font-semibold">Error</AlertTitle>
                     <AlertDescription>{error}</AlertDescription>
-                  </div>
-                </Alert>
-              )}
-              {vocals && (
-                <Alert className="bg-green-100 border-green-400 text-green-700 rounded-lg">
-                  <PlayCircle className="h-4 w-4 flex-shrink-0" />
-                  <div>
-                    <AlertTitle className="font-semibold">Vocals</AlertTitle>
-                    <AlertDescription className="break-all">
-                      {vocals}
-                    </AlertDescription>
-                  </div>
-                </Alert>
-              )}
-              {accompaniment && (
-                <Alert className="bg-green-100 border-green-400 text-green-700 rounded-lg">
-                  <PlayCircle className="h-4 w-4 flex-shrink-0" />
-                  <div>
-                    <AlertTitle className="font-semibold">Accompaniment</AlertTitle>
-                    <AlertDescription className="break-all">
-                      {accompaniment}
-                    </AlertDescription>
                   </div>
                 </Alert>
               )}
