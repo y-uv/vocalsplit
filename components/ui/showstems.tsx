@@ -231,9 +231,9 @@ export function Showstems({ vocals, accompaniment, originalFileName }: Showstems
   }, [isPlaying, duration])
 
   return (
-    <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-      <div className="bg-white rounded-lg p-8 w-full max-w-md">
-        <h1 className="text-2xl font-bold mb-6 text-center text-gray-800">VocalSplit Results</h1>
+    <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="bg-gray-800 rounded-2xl p-8 w-full max-w-md">
+        <h1 className="text-3xl font-extrabold text-center text-white mb-4">VocalSplit Results</h1>
         {error ? (
           <div className="text-red-500 flex items-center justify-center mb-4">
             <AlertCircle className="mr-2" />
@@ -244,30 +244,30 @@ export function Showstems({ vocals, accompaniment, originalFileName }: Showstems
             <div className="flex justify-center mb-4">
               <button
                 onClick={togglePlayPause}
-                className="bg-blue-500 text-white rounded-full p-3 hover:bg-blue-600 transition-colors"
+                className="bg-gray-800 text-white rounded-full p-3 hover:bg-gray-700 transition-colors"
                 disabled={!duration}
               >
                 {isPlaying ? <Pause size={24} /> : <Play size={24} />}
               </button>
             </div>
-            <div className="text-center text-gray-600 mb-4">
+            <div className="text-center text-gray-300 mb-4">
               {formatTime(currentTime)} / {formatTime(duration)}
             </div>
-            <div className="space-y-4">
+            <div className="space-y-1">
               <div className="space-y-1">
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-700 font-medium">Vocal</span>
+                  <span className="text-gray-300 font-medium">Vocal</span>
                   <div className="flex items-center space-x-2">
                     <button 
                       onClick={toggleMuteVocal} 
-                      className="text-gray-600 hover:text-gray-800"
+                      className="text-gray-300 hover:text-gray-400"
                       disabled={!duration}
                     >
                       {isMutedVocal ? <VolumeX size={20} /> : <Volume2 size={20} />}
                     </button>
                     <button
                       onClick={() => downloadTrack('vocal')}
-                      className="text-gray-600 hover:text-gray-800"
+                      className="text-gray-300 hover:text-gray-400"
                       aria-label="Download vocal track"
                       disabled={!duration}
                     >
@@ -279,18 +279,18 @@ export function Showstems({ vocals, accompaniment, originalFileName }: Showstems
               </div>
               <div className="space-y-1">
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-700 font-medium">Instrumental</span>
+                  <span className="text-gray-300 font-medium">Instrumental</span>
                   <div className="flex items-center space-x-2">
                     <button 
                       onClick={toggleMuteInstrumental} 
-                      className="text-gray-600 hover:text-gray-800"
+                      className="text-gray-300 hover:text-gray-400"
                       disabled={!duration}
                     >
                       {isMutedInstrumental ? <VolumeX size={20} /> : <Volume2 size={20} />}
                     </button>
                     <button
                       onClick={() => downloadTrack('instrumental')}
-                      className="text-gray-600 hover:text-gray-800"
+                      className="text-gray-300 hover:text-gray-400"
                       aria-label="Download instrumental track"
                       disabled={!duration}
                     >

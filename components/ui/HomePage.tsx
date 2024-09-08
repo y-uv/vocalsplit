@@ -76,13 +76,13 @@ const HomePage = ({ onProcessComplete }: HomePageProps) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center p-4 font-sans">
+    <div className="min-h-screen bg-white flex flex-col items-center justify-center p-4 font-sans">
       <div className="w-full max-w-md">
         <div className="relative">
-          <Card className="w-full bg-white shadow-2xl rounded-2xl overflow-hidden">
+          <Card className="w-full bg-gray-800 shadow-2xl rounded-2xl overflow-hidden">
             <CardHeader className="space-y-1">
-              <CardTitle className="text-3xl font-extrabold text-center text-gray-800">VocalSplit</CardTitle>
-              <CardDescription className="text-center text-gray-600 font-medium">
+              <CardTitle className="text-3xl font-extrabold text-center text-white">VocalSplit</CardTitle>
+              <CardDescription className="text-center text-gray-400 font-medium">
                 Separate vocals from instrumentals instantly
               </CardDescription>
             </CardHeader>
@@ -97,7 +97,7 @@ const HomePage = ({ onProcessComplete }: HomePageProps) => {
                 onDrop={handleDrop}
               >
                 <Upload className="mx-auto h-12 w-12 text-gray-400" />
-                <p className="mt-2 text-sm text-gray-600 font-medium">
+                <p className="mt-2 text-sm text-gray-400 font-medium">
                   Drag and drop your audio file here, or
                 </p>
                 <input
@@ -111,7 +111,7 @@ const HomePage = ({ onProcessComplete }: HomePageProps) => {
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  className="mt-4 font-semibold"
+                  className="mt-4 font-semibold text-gray-400"
                   onClick={handleButtonClick}
                 >
                   Select Audio File
@@ -128,7 +128,7 @@ const HomePage = ({ onProcessComplete }: HomePageProps) => {
                   {isProcessing ? 'Processing...' : 'Process Audio'}
                 </Button>
               ) : (
-                <p className="text-sm text-gray-500 text-center w-full">Upload an audio file to begin</p>
+                <p className="text-sm text-gray-400 text-center w-full">Upload an audio file to begin</p>
               )}
             </CardFooter>
           </Card>
