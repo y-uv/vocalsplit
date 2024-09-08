@@ -115,6 +115,9 @@ export function Showstems({ vocals, accompaniment, originalFileName }: Showstems
 
   const startPlayback = () => {
     if (audioContextRef.current && vocalBufferRef.current && instrumentalBufferRef.current) {
+      // Stop any existing playback
+      stopPlayback()
+
       sourceNodeVocalRef.current = audioContextRef.current.createBufferSource()
       sourceNodeVocalRef.current.buffer = vocalBufferRef.current
       sourceNodeVocalRef.current.connect(gainNodeVocalRef.current!)
@@ -136,9 +139,15 @@ export function Showstems({ vocals, accompaniment, originalFileName }: Showstems
   }
 
   const stopPlayback = () => {
-    if (sourceNodeVocalRef.current && sourceNodeInstrumentalRef.current) {
+    if (sourceNodeVocalRef.current) {
       sourceNodeVocalRef.current.stop()
+      sourceNodeVocalRef.current.disconnect()
+      sourceNodeVocalRef.current = null
+    }
+    if (sourceNodeInstrumentalRef.current) {
       sourceNodeInstrumentalRef.current.stop()
+      sourceNodeInstrumentalRef.current.disconnect()
+      sourceNodeInstrumentalRef.current = null
     }
   }
 
@@ -178,17 +187,27 @@ export function Showstems({ vocals, accompaniment, originalFileName }: Showstems
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
   }
 
-  const downloadTrack = (trackName: string) => {
-    const link = document.createElement('a')
+  const downloadTrack = async (trackName: string) => {
     const fileUrl = trackName === 'vocal' ? vocals : accompaniment
     const fileName = originalFileName.replace(/\.[^/.]+$/, "")
     const extension = fileUrl.split('.').pop()
-    
-    link.href = fileUrl
-    link.download = `${fileName}_${trackName === 'vocal' ? 'vocals' : 'instrumental'}.${extension}`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+    const fullFileName = `${fileName}_${trackName === 'vocal' ? 'vocals' : 'instrumental'}.${extension}`
+
+    try {
+      const response = await fetch(fileUrl)
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = fullFileName
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Error downloading file:', error)
+      setError('Failed to download the file. Please try again.')
+    }
   }
 
   useEffect(() => {
