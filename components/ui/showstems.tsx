@@ -17,50 +17,68 @@ export function Showstems({ vocals, accompaniment, originalFileName }: Showstems
   const [isMutedInstrumental, setIsMutedInstrumental] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const audioRefVocal = useRef<HTMLAudioElement>(null)
-  const audioRefInstrumental = useRef<HTMLAudioElement>(null)
   const canvasRefVocal = useRef<HTMLCanvasElement>(null)
   const canvasRefInstrumental = useRef<HTMLCanvasElement>(null)
+
+  const audioContextRef = useRef<AudioContext | null>(null)
+  const sourceNodeVocalRef = useRef<AudioBufferSourceNode | null>(null)
+  const sourceNodeInstrumentalRef = useRef<AudioBufferSourceNode | null>(null)
+  const gainNodeVocalRef = useRef<GainNode | null>(null)
+  const gainNodeInstrumentalRef = useRef<GainNode | null>(null)
+  const startTimeRef = useRef<number>(0)
+  const vocalBufferRef = useRef<AudioBuffer | null>(null)
+  const instrumentalBufferRef = useRef<AudioBuffer | null>(null)
 
   useEffect(() => {
     console.log('Showstems component mounted with props:', { vocals, accompaniment, originalFileName });
 
-    if (audioRefVocal.current && audioRefInstrumental.current) {
-      audioRefVocal.current.src = vocals
-      audioRefInstrumental.current.src = accompaniment
+    const loadAudio = async () => {
+      try {
+        console.log('Fetching vocal track:', vocals);
+        const vocalResponse = await fetch(vocals)
+        console.log('Vocal response status:', vocalResponse.status);
 
-      const loadAudio = async () => {
-        try {
-          console.log('Fetching vocal track:', vocals);
-          const vocalResponse = await fetch(vocals)
-          console.log('Vocal response status:', vocalResponse.status);
+        console.log('Fetching instrumental track:', accompaniment);
+        const instrumentalResponse = await fetch(accompaniment)
+        console.log('Instrumental response status:', instrumentalResponse.status);
 
-          console.log('Fetching instrumental track:', accompaniment);
-          const instrumentalResponse = await fetch(accompaniment)
-          console.log('Instrumental response status:', instrumentalResponse.status);
-
-          if (!vocalResponse.ok || !instrumentalResponse.ok) {
-            throw new Error('Failed to load audio files')
-          }
-
-          const vocalArrayBuffer = await vocalResponse.arrayBuffer()
-          const instrumentalArrayBuffer = await instrumentalResponse.arrayBuffer()
-
-          const audioContext = new AudioContext()
-          const vocalAudioBuffer = await audioContext.decodeAudioData(vocalArrayBuffer)
-          const instrumentalAudioBuffer = await audioContext.decodeAudioData(instrumentalArrayBuffer)
-
-          drawWaveform(canvasRefVocal, '#4a90e2', vocalAudioBuffer)
-          drawWaveform(canvasRefInstrumental, '#50e3c2', instrumentalAudioBuffer)
-
-          setError(null)
-        } catch (error) {
-          console.error('Error loading audio files:', error)
-          setError('Failed to load audio files. Please try again.')
+        if (!vocalResponse.ok || !instrumentalResponse.ok) {
+          throw new Error('Failed to load audio files')
         }
-      }
 
-      loadAudio()
+        const vocalArrayBuffer = await vocalResponse.arrayBuffer()
+        const instrumentalArrayBuffer = await instrumentalResponse.arrayBuffer()
+
+        audioContextRef.current = new AudioContext()
+        vocalBufferRef.current = await audioContextRef.current.decodeAudioData(vocalArrayBuffer)
+        instrumentalBufferRef.current = await audioContextRef.current.decodeAudioData(instrumentalArrayBuffer)
+
+        drawWaveform(canvasRefVocal, '#4a90e2', vocalBufferRef.current)
+        drawWaveform(canvasRefInstrumental, '#50e3c2', instrumentalBufferRef.current)
+
+        setDuration(vocalBufferRef.current.duration)
+        setError(null)
+
+        gainNodeVocalRef.current = audioContextRef.current.createGain()
+        gainNodeVocalRef.current.gain.value = 1
+        gainNodeInstrumentalRef.current = audioContextRef.current.createGain()
+        gainNodeInstrumentalRef.current.gain.value = 1
+
+        gainNodeVocalRef.current.connect(audioContextRef.current.destination)
+        gainNodeInstrumentalRef.current.connect(audioContextRef.current.destination)
+
+      } catch (error) {
+        console.error('Error loading audio files:', error)
+        setError('Failed to load audio files. Please try again.')
+      }
+    }
+
+    loadAudio()
+
+    return () => {
+      if (audioContextRef.current) {
+        audioContextRef.current.close()
+      }
     }
   }, [vocals, accompaniment, originalFileName])
 
@@ -95,27 +113,61 @@ export function Showstems({ vocals, accompaniment, originalFileName }: Showstems
     }
   }
 
-  const togglePlayPause = () => {
-    if (isPlaying) {
-      audioRefVocal.current?.pause()
-      audioRefInstrumental.current?.pause()
-    } else {
-      audioRefVocal.current?.play()
-      audioRefInstrumental.current?.play()
+  const startPlayback = () => {
+    if (audioContextRef.current && vocalBufferRef.current && instrumentalBufferRef.current) {
+      sourceNodeVocalRef.current = audioContextRef.current.createBufferSource()
+      sourceNodeVocalRef.current.buffer = vocalBufferRef.current
+      sourceNodeVocalRef.current.connect(gainNodeVocalRef.current!)
+
+      sourceNodeInstrumentalRef.current = audioContextRef.current.createBufferSource()
+      sourceNodeInstrumentalRef.current.buffer = instrumentalBufferRef.current
+      sourceNodeInstrumentalRef.current.connect(gainNodeInstrumentalRef.current!)
+
+      sourceNodeVocalRef.current.start(0, currentTime)
+      sourceNodeInstrumentalRef.current.start(0, currentTime)
+
+      startTimeRef.current = audioContextRef.current.currentTime - currentTime
+
+      sourceNodeVocalRef.current.onended = () => {
+        setIsPlaying(false)
+        setCurrentTime(0)
+      }
     }
-    setIsPlaying(!isPlaying)
+  }
+
+  const stopPlayback = () => {
+    if (sourceNodeVocalRef.current && sourceNodeInstrumentalRef.current) {
+      sourceNodeVocalRef.current.stop()
+      sourceNodeInstrumentalRef.current.stop()
+    }
+  }
+
+  const togglePlayPause = () => {
+    if (audioContextRef.current) {
+      if (isPlaying) {
+        audioContextRef.current.suspend()
+        stopPlayback()
+      } else {
+        if (currentTime >= duration) {
+          setCurrentTime(0)
+        }
+        audioContextRef.current.resume()
+        startPlayback()
+      }
+      setIsPlaying(!isPlaying)
+    }
   }
 
   const toggleMuteVocal = () => {
-    if (audioRefVocal.current) {
-      audioRefVocal.current.muted = !isMutedVocal
+    if (gainNodeVocalRef.current) {
+      gainNodeVocalRef.current.gain.value = isMutedVocal ? 1 : 0
     }
     setIsMutedVocal(!isMutedVocal)
   }
 
   const toggleMuteInstrumental = () => {
-    if (audioRefInstrumental.current) {
-      audioRefInstrumental.current.muted = !isMutedInstrumental
+    if (gainNodeInstrumentalRef.current) {
+      gainNodeInstrumentalRef.current.gain.value = isMutedInstrumental ? 1 : 0
     }
     setIsMutedInstrumental(!isMutedInstrumental)
   }
@@ -139,13 +191,25 @@ export function Showstems({ vocals, accompaniment, originalFileName }: Showstems
     document.body.removeChild(link)
   }
 
-  const handleTimeUpdate = () => {
-    if (audioRefVocal.current && audioRefInstrumental.current) {
-      const newTime = audioRefVocal.current.currentTime
-      setCurrentTime(newTime)
-      audioRefInstrumental.current.currentTime = newTime
+  useEffect(() => {
+    let animationFrameId: number = 0
+
+    const updateTime = () => {
+      if (audioContextRef.current && isPlaying) {
+        const newTime = audioContextRef.current.currentTime - startTimeRef.current
+        setCurrentTime(newTime >= duration ? duration : newTime)
+        animationFrameId = requestAnimationFrame(updateTime)
+      }
     }
-  }
+
+    if (isPlaying) {
+      updateTime()
+    } else {
+      cancelAnimationFrame(animationFrameId)
+    }
+
+    return () => cancelAnimationFrame(animationFrameId)
+  }, [isPlaying, duration])
 
   return (
     <div className="min-h-screen bg-gray-900 flex items-center justify-center">
@@ -220,12 +284,6 @@ export function Showstems({ vocals, accompaniment, originalFileName }: Showstems
             </div>
           </div>
         )}
-        <audio
-          ref={audioRefVocal}
-          onTimeUpdate={handleTimeUpdate}
-          onLoadedMetadata={() => setDuration(audioRefVocal.current?.duration || 0)}
-        />
-        <audio ref={audioRefInstrumental} />
       </div>
     </div>
   )
